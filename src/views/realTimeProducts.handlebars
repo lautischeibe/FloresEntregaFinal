@@ -1,0 +1,115 @@
+<div>
+  <h1>Productos en Tiempo Real</h1>
+
+  <h2>Nuevo Producto</h2>
+  <form id="formNewProduct">
+    <input type="number" id="productId" placeholder="ID del producto" required />
+    <input type="text" id="title" placeholder="Título" required />
+    <input type="text" id="description" placeholder="Descripción" required />
+    <input type="text" id="code" placeholder="Code" required />
+    <input type="number" id="price" placeholder="Precio" required />
+    <input type="boolean" id="status" placeholder="Status" required />
+    <input type="number" id="stock" placeholder="Stock" required />
+    <input type="text" id="category" placeholder="Categoría" required />
+    <input type="text" id="thumbnail" placeholder="URL de la imagen" required />
+    <button type="submit">Agregar Producto</button>
+  </form>
+
+  <!-- Filtros -->
+  <form id="filters-form">
+    <label for="query">Buscar por categoría:</label>
+    <select id="query">
+      <option value="">Categoría</option>
+    </select>
+
+    <label for="sort">Ordenar por precio:</label>
+    <select id="sort">
+      <option value="">Sin ordenamiento</option>
+      <option value="asc">Ascendente</option>
+      <option value="desc">Descendente</option>
+    </select>
+
+    <button type="button" onclick="applyFilters()">Aplicar Filtros</button>
+  </form>
+
+  <!-- Lista de productos -->
+  <div id="product-list" class="product-grid"></div>
+
+  <!-- Paginación -->
+  <nav id="pagination">
+    <button id="prev-page" onclick="changePage(-1)" disabled>Anterior</button>
+    <span id="current-page"></span>
+    <button id="next-page" onclick="changePage(1)" disabled>Siguiente</button>
+  </nav>
+
+  <h2>Eliminar Producto</h2>
+  <form id="delete-form">
+    <input type="number" id="delete-id" placeholder="ID del producto" required />
+    <button type="submit">Eliminar Producto</button>
+  </form>
+</div>
+
+
+<script>
+  let currentPage = 1;
+  let limit = 5;
+
+  const loadCategories = async () => {
+    const response = await fetch('/api/products/categories'); // Llama al endpoint del backend
+    const categories = await response.json();
+
+    const querySelect = document.getElementById('query');
+    categories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      querySelect.appendChild(option);
+    });
+  };
+
+  const applyFilters = async () => {
+    const query = document.getElementById('query').value;
+    const sort = document.getElementById('sort').value;
+
+    const response = await fetch(`/api/products?page=${currentPage}&limit=${limit}&query=${query}&sort=${sort}`);
+    const data = await response.json();
+
+    updateProductList(data.payload);
+    updatePagination(data);
+  };
+
+  const changePage = async (direction) => {
+    currentPage += direction;
+    applyFilters();
+  };
+
+  const updateProductList = (products) => {
+    const productList = document.getElementById('product-list');
+    productList.innerHTML = '';
+    products.forEach(product => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+      <h3>${product.title}</h3>
+      <img src="/img/${product.thumbnails[0]}" alt="${product.title}" class="pokemon-image">
+      <p>${product.productId}</p>
+      <p>${product.description}</p>
+      <p><strong>Precio:</strong> $${product.price}</p>
+      <p><strong>Categoría:</strong> ${product.category}</p>
+    `;
+      productList.appendChild(card);
+    });
+  };
+
+  const updatePagination = ({ page, hasPrevPage, hasNextPage }) => {
+    document.getElementById('current-page').textContent = `Página ${page}`;
+    document.getElementById('prev-page').disabled = !hasPrevPage;
+    document.getElementById('next-page').disabled = !hasNextPage;
+  };
+
+  loadCategories(); // Carga categorías al inicio
+  applyFilters(); // Ejecuta filtros iniciales
+
+</script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/index.js"></script>

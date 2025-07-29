@@ -1,0 +1,332 @@
+<h1>Tienda Pokémon</h1>
+
+<button onclick="createCart()">Crear nuevo carrito</button>
+<div>
+  <label for="cartSelect">Seleccionar carrito:</label>
+  <select id="cartSelect">
+    <!-- Opciones serán generadas dinámicamente -->
+  </select>
+  <button onclick="loadCarts()">Cargar carrito</button>
+</div>
+
+<!-- Formulario de filtrado -->
+<form id="filterForm" style="margin-bottom: 20px;">
+  <label for="query">Categoría:</label>
+  <input type="text" id="query" name="query" placeholder="Escribe una categoría..." />
+
+  <label for="minPrice">Precio mínimo:</label>
+  <input type="number" id="minPrice" name="minPrice" placeholder="0" />
+
+  <label for="maxPrice">Precio máximo:</label>
+  <input type="number" id="maxPrice" name="maxPrice" placeholder="1000" />
+
+  <label for="sort">Ordenar por precio:</label>
+  <select id="sort" name="sort">
+    <option value="">Ninguno</option>
+    <option value="asc">Ascendente</option>
+    <option value="desc">Descendente</option>
+  </select>
+
+  <button type="button" onclick="filterProducts()">Filtrar</button>
+</form>
+
+<div id="product-list" class="product-grid">
+  <!-- Aquí se renderizan los productos -->
+  {{#each product}}
+  <div class="product-card">
+    <img src="/img/{{this.thumbnails.[0]}}" alt="{{this.title}}" class="pokemon-image">
+    <h3>{{this.title}}</h3>
+    <p>{{this.description}}</p>
+    <p><strong>Precio:</strong> ${{this.price}}</p>
+    <button onclick="addToCart(null, {{this.productId}})">Agregar al carrito</button>
+  </div>
+  {{/each}}
+</div>
+
+<div id="pagination" style="margin-top: 20px;">
+  <button id="prevPageBtn" onclick="changePage('prev')" disabled>Anterior</button>
+  <span id="currentPage">Página 1</span>
+  <button id="nextPageBtn" onclick="changePage('next')">Siguiente</button>
+</div>
+
+<script>
+async function filterProducts() {
+  const query = document.getElementById('query').value;
+  const minPrice = document.getElementById('minPrice').value;
+  const maxPrice = document.getElementById('maxPrice').value;
+  const sort = document.getElementById('sort').value;
+
+  // Construir la URL con los parámetros de filtrado
+  let url = '/api/products?';
+  if (query) url += `query=${query}&`;
+  if (minPrice) url += `minPrice=${minPrice}&`;
+  if (maxPrice) url += `maxPrice=${maxPrice}&`;
+  if (sort) url += `sort=${sort}`;
+
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const { payload } = await response.json(); // Obtener los productos filtrados
+      renderProducts(payload); // Función para renderizar los productos en la página
+    } else {
+      console.error('Error al filtrar productos:', await response.json());
+    }
+  } catch (error) {
+    console.error('Error al filtrar productos:', error);
+  }
+}
+
+// Función para renderizar los productos en la página
+function renderProducts(products) {
+  const productList = document.getElementById('product-list');
+  productList.innerHTML = ''; // Limpiar la lista de productos
+  products.forEach(product => {
+    const productCard = document.createElement('div');
+    productCard.className = 'product-card';
+    productCard.innerHTML = `
+      <img src="/img/${product.thumbnails[0]}" alt="${product.title}" class="pokemon-image">
+      <h3>${product.title}</h3>
+      <p>${product.description}</p>
+      <p><strong>Precio:</strong> $${product.price}</p>
+      <button onclick="addToCart(null, ${product.productId})">Agregar al carrito</button>
+    `;
+    productList.appendChild(productCard);
+  });
+}
+</script>
+
+<script>
+  async function createCart() {
+  try {
+    const response = await fetch('/api/carts/', { method: 'POST' }); // Crear el carrito
+    if (response.ok) {
+      const newCart = await response.json(); // Obtener los datos del carrito creado
+      alert(`Carrito creado con ID: ${newCart.id}`);
+      // Redirigir automáticamente a la vista del carrito
+      window.location.href = `/api/carts/${newCart.id}/view`;
+    } else {
+      const errorData = await response.json();
+      alert(`Error: ${errorData.message}`);
+    }
+  } catch (error) {
+    console.error('Error al crear el carrito:', error);
+    alert('Hubo un problema al crear el carrito.');
+  }
+}
+</script>
+
+
+<script>
+async function addToCart(cartId, productId) {
+  if (!cartId) {
+    const cartSelect = document.getElementById('cartSelect');
+    cartId = cartSelect?.value; // Capturar el carrito activo
+  }
+
+  // Verificar que ambos IDs sean válidos
+  if (!cartId || !productId) {
+    console.error('cartId o productId son inválidos:', { cartId, productId });
+    alert('Seleccioná un carrito antes de agregar productos.');
+    return;
+  }
+
+  console.log('Intentando agregar producto al carrito:', { cartId, productId });
+
+  try {
+    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ quantity: 1 }) // Cantidad predeterminada: 1
+    });
+
+    if (response.ok) {
+      alert('Producto agregado correctamente al carrito seleccionado.');
+    } else {
+      const errorData = await response.json();
+      alert(`Error: ${errorData.message}`);
+      console.error('Error en el backend:', errorData);
+    }
+  } catch (error) {
+    console.error('Error al agregar producto al carrito:', error);
+    alert('Hubo un problema al agregar el producto.');
+  }
+}
+
+
+</script>
+
+<script>
+  let currentPage = 1; // Página actual
+const limit = 10; // Productos por página
+
+async function fetchProducts(page = 1) {
+  try {
+    const response = await fetch(`/api/products?limit=${limit}&page=${page}`);
+    if (response.ok) {
+      const data = await response.json();
+
+      renderProducts(data.payload); // Mostrar los productos en la página
+      updatePagination(data); // Actualizar los botones de paginación
+    } else {
+      console.error('Error al obtener productos:', await response.json());
+    }
+  } catch (error) {
+    console.error('Error al obtener productos:', error);
+  }
+}
+
+function renderProducts(products) {
+  const productList = document.getElementById('product-list');
+  productList.innerHTML = ''; // Limpiar la lista de productos
+  products.forEach(product => {
+    const productCard = document.createElement('div');
+    productCard.className = 'product-card';
+    productCard.innerHTML = `
+      <img src="/img/${product.thumbnails[0]}" alt="${product.title}" class="pokemon-image">
+      <h3>${product.title}</h3>
+      <p>${product.description}</p>
+      <p><strong>Precio:</strong> $${product.price}</p>
+      <button onclick="addToCart(1, ${product.id})">Agregar al carrito</button>
+    `;
+    productList.appendChild(productCard);
+  });
+}
+
+function updatePagination({ page, totalPages, hasPrevPage, hasNextPage }) {
+  currentPage = page;
+  document.getElementById('currentPage').textContent = `Página ${currentPage}`;
+
+  // Habilitar o deshabilitar los botones según corresponda
+  const prevPageBtn = document.getElementById('prevPageBtn');
+  const nextPageBtn = document.getElementById('nextPageBtn');
+
+  prevPageBtn.disabled = !hasPrevPage;
+  nextPageBtn.disabled = !hasNextPage;
+}
+
+function changePage(direction) {
+  if (direction === 'prev' && currentPage > 1) {
+    fetchProducts(currentPage - 1);
+  } else if (direction === 'next') {
+    fetchProducts(currentPage + 1);
+  }
+}
+
+// Cargar la primera página al abrir la página
+fetchProducts();
+</script>
+
+<script>
+async function loadCarts() {
+  try {
+    const response = await fetch('/api/carts');
+    if (response.ok) {
+      const carts = await response.json();
+      const cartSelect = document.getElementById('cartSelect');
+      cartSelect.innerHTML = ''; // Limpiar las opciones anteriores
+
+      carts.forEach(cart => {
+        const option = document.createElement('option');
+        option.value = cart.id;
+        option.textContent = `Carrito ${cart.id}`;
+        cartSelect.appendChild(option);
+      });
+    } else {
+      console.error('Error al cargar carritos:', await response.json());
+    }
+  } catch (error) {
+    console.error('Error al cargar carritos:', error);
+  }
+}
+
+// Llamar al cargar la página
+document.addEventListener('DOMContentLoaded', loadCarts);
+
+// Llamar a esta función al cargar la página
+document.addEventListener('DOMContentLoaded', loadCarts);
+
+async function loadCart() {
+  const cartSelect = document.getElementById('cartSelect'); // Obtener el menú desplegable
+  const cartId = cartSelect.value; // Obtener el ID del carrito seleccionado
+
+  if (!cartId) {
+    alert('Seleccioná un carrito válido.');
+    return;
+  }
+
+  // Redirigir a la vista del carrito seleccionado
+  window.location.href = `/api/carts/${cartId}/view`;
+}
+
+function renderCartProducts(products) {
+  const productList = document.getElementById('product-list');
+  productList.innerHTML = ''; // Limpiar la lista de productos del carrito
+
+  products.forEach(product => {
+    const productCard = document.createElement('div');
+    productCard.className = 'product-card';
+    productCard.innerHTML = `
+      <h3>Producto ID: ${product.productId}</h3>
+      <p><strong>Cantidad:</strong> ${product.quantity}</p>
+    `;
+    productList.appendChild(productCard);
+  });
+}
+</script>
+
+
+<!-- Estilo básico -->
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f8f8;
+    text-align: center;
+  }
+
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+    padding: 10px;
+  }
+
+  .product-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  .pokemon-icon {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 10px;
+  }
+
+  .product-card button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+
+  .pokemon-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 10px;
+  }
+  .product-card button:hover {
+    background: #0056b3;
+  }
+</style>

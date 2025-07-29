@@ -1,0 +1,47 @@
+<h1>Mi Carrito</h1>
+
+{{#if cart.products.length}}
+<ul>
+  {{#each cart.products}}
+  <li>
+    <strong>Producto ID:</strong> {{this.productId}} - 
+    <strong>Cantidad:</strong> {{this.quantity}}
+    <button onclick="removeFromCart(1, {{this.productId}})">Eliminar del carrito</button>
+  </li>
+  {{/each}}
+</ul>
+{{else}}
+<p>El carrito está vacío. ¡Agregá productos desde la tienda!</p>
+{{/if}}
+
+<script>
+  // Función para eliminar un producto del carrito
+  async function removeFromCart(cartId, productId) {
+  if (!productId) {
+    console.error('El productId está llegando como undefined');
+    alert('No se puede eliminar el producto porque su ID no es válido.');
+    return;
+  }
+
+  console.log('Eliminando producto del carrito:', { cartId, productId }); // Log de depuración
+
+  try {
+    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+      method: 'DELETE', // Método DELETE
+    });
+
+    if (response.ok) {
+      alert('Producto eliminado del carrito.');
+      location.reload(); // Refrescar la página para reflejar los cambios
+    } else {
+      const errorData = await response.json();
+      alert(`Error: ${errorData.message}`);
+      console.error('Error al eliminar producto:', errorData);
+    }
+  } catch (error) {
+    console.error('Error al eliminar producto del carrito:', error);
+    alert('Hubo un problema al eliminar el producto.');
+  }
+}
+</script>
+
