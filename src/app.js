@@ -4,9 +4,23 @@ import path from "path";
 import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import ProductManager from "./managers/ProductManager.js";
+import productsRouter from "./routes/products.router.js";
+
+// Conecto a MongoDB
+const connectMongoDB = async () => {
+  try {
+    await mongoose.connect("mongodb+srv://lautischeibe:a42331389@ecommerce-cluster.kczq7za.mongodb.net/myDatabase?retryWrites=true&w=majority&appName=ecommerce-cluster");
+    console.log("Conectado a MongoDB");
+  } catch (error) {
+    console.error("Error al conectar a MongoDB:", error);
+  }
+};
+
+connectMongoDB();
 
 // __dirname workaround en ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -30,6 +44,9 @@ app.use("/api/carts", cartRoutes);
 
 // ProductManager instanciado
 const productManager = new ProductManager("./data/products.json");
+
+// Endpoints mongoose
+app.use("/api/products", productsRouter);
 
 // Servidor HTTP + Websockets
 const PORT = 8080;
