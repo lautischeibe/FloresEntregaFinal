@@ -4,22 +4,17 @@ import path from "path";
 import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
-import mongoose from "mongoose";
-import productRoutes from "./routes/productRoutes.js";
+// import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import ProductManager from "./managers/ProductManager.js";
 import productsRouter from "./routes/products.router.js";
+import connectMongoDB from "./config/db.js";
+import dotenv from "dotenv";
 
-// Conecto a MongoDB
-const connectMongoDB = async () => {
-  try {
-    await mongoose.connect("mongodb+srv://lautischeibe:a42331389@ecommerce-cluster.kczq7za.mongodb.net/myDatabase?retryWrites=true&w=majority&appName=ecommerce-cluster");
-    console.log("Conectado a MongoDB");
-  } catch (error) {
-    console.error("Error al conectar a MongoDB:", error);
-  }
-};
+// Inicializo variables de entorno
+dotenv.config();
 
+// Conexion MongoDB
 connectMongoDB();
 
 // __dirname workaround en ES Modules
@@ -39,7 +34,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.use("/img", express.static(path.join(__dirname, "img")));
 
 // Rutas de API
-app.use("/api/products", productRoutes);
+// app.use("/api/products", productRoutes);
 app.use("/api/carts", cartRoutes);
 
 // ProductManager instanciado
@@ -49,7 +44,7 @@ const productManager = new ProductManager("./data/products.json");
 app.use("/api/products", productsRouter);
 
 // Servidor HTTP + Websockets
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 const server = http.createServer(app);
 const io = new Server(server);
 
