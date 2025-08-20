@@ -1,12 +1,17 @@
 <h1>Mi Carrito</h1>
-
+<button class="delete-cart-btn" data-id={{cart._id}}>🗑️ Eliminar carrito</button>
 {{#if cart.products.length}}
 <ul>
   {{#each cart.products}}
-  <li>
-    <strong>Producto ID:</strong> {{this.productId}} - 
-    <strong>Cantidad:</strong> {{this.quantity}}
-    <button onclick="removeFromCart(1, {{this.productId}})">Eliminar del carrito</button>
+  <li class="cart-item" style="margin-bottom: 20px;">
+    <img src="/img/{{product.thumbnails}}" alt="${{product.title}}" style="width: 300px; height: auto;" />
+    <div>
+      <strong>{{this.product.title}}</strong><br>
+      <em>{{this.product.description}}</em><br>
+      <strong>Precio:</strong> ${{this.product.price}}<br>
+      <strong>Cantidad:</strong> {{this.quantity}}<br>
+      <button onclick="removeFromCart('{{../cart._id}}', '{{this.product._id}}')">❌ Eliminar</button>
+    </div>
   </li>
   {{/each}}
 </ul>
@@ -15,33 +20,55 @@
 {{/if}}
 
 <script>
-  // Función para eliminar un producto del carrito
   async function removeFromCart(cartId, productId) {
-  if (!productId) {
-    console.error('El productId está llegando como undefined');
-    alert('No se puede eliminar el producto porque su ID no es válido.');
-    return;
-  }
-
-  console.log('Eliminando producto del carrito:', { cartId, productId }); // Log de depuración
-
-  try {
-    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
-      method: 'DELETE', // Método DELETE
-    });
-
-    if (response.ok) {
-      alert('Producto eliminado del carrito.');
-      location.reload(); // Refrescar la página para reflejar los cambios
-    } else {
-      const errorData = await response.json();
-      alert(`Error: ${errorData.message}`);
-      console.error('Error al eliminar producto:', errorData);
+    if (!cartId || !productId) {
+      alert('Faltan datos para eliminar el producto.');
+      return;
     }
-  } catch (error) {
-    console.error('Error al eliminar producto del carrito:', error);
-    alert('Hubo un problema al eliminar el producto.');
-  }
-}
-</script>
 
+    try {
+      const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert('Producto eliminado del carrito.');
+        location.reload();
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      alert('Hubo un problema al eliminar el producto.');
+    }
+  }
+
+
+  document.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("delete-cart-btn")) {
+      const cartId = e.target.dataset.id;
+
+      if (!confirm("¿Estás seguro de que querés eliminar este carrito?")) return;
+
+      try {
+        const res = await fetch(`/api/carts/${cartId}`, {
+          method: "DELETE"
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          alert("Carrito eliminado correctamente");
+          location.reload(); // o podés eliminar el elemento del DOM si querés evitar recargar
+        } else {
+          alert("Error: " + result.message);
+        }
+      } catch (err) {
+        console.error("Error al eliminar carrito:", err);
+        alert("Hubo un problema al eliminar el carrito");
+      }
+    }
+  });
+
+</script>

@@ -1,6 +1,5 @@
 const socket = io(); // Conexión con el servidor
 
-
 const formNewProduct = document.getElementById("formNewProduct");
 
 formNewProduct.addEventListener("submit", (e) => {

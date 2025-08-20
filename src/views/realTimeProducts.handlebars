@@ -49,13 +49,12 @@
   </form>
 </div>
 
-
 <script>
   let currentPage = 1;
   let limit = 5;
 
   const loadCategories = async () => {
-    const response = await fetch('/api/products/categories'); // Llama al endpoint del backend
+    const response = await fetch('/api/products/categories');
     const categories = await response.json();
 
     const querySelect = document.getElementById('query');
@@ -71,7 +70,11 @@
     const query = document.getElementById('query').value;
     const sort = document.getElementById('sort').value;
 
-    const response = await fetch(`/api/products?page=${currentPage}&limit=${limit}&query=${query}&sort=${sort}`);
+    let url = `/api/products?page=${currentPage}&limit=${limit}`;
+    if (query) url += `&category=${encodeURIComponent(query)}`;
+    if (sort) url += `&sort=${sort}`;
+
+    const response = await fetch(url);
     const data = await response.json();
 
     updateProductList(data.payload);
@@ -90,13 +93,14 @@
       const card = document.createElement('div');
       card.className = 'product-card';
       card.innerHTML = `
-      <h3>${product.title}</h3>
-      <img src="/img/${product.thumbnails[0]}" alt="${product.title}" class="pokemon-image">
-      <p>${product.productId}</p>
-      <p>${product.description}</p>
-      <p><strong>Precio:</strong> $${product.price}</p>
-      <p><strong>Categoría:</strong> ${product.category}</p>
-    `;
+        <h3>${product.title}</h3>
+        <img src="/img/${product.thumbnails}" style="width: 300px; height: auto;" />
+        <p>${product.description}</p>
+        <p>${product.code}</p>
+        <p><strong>Precio:</strong> $${product.price}</p>
+        <p><strong>Categoría:</strong> ${product.category}</p>
+        <p>${product._id}</p>
+      `;
       productList.appendChild(card);
     });
   };
@@ -107,14 +111,15 @@
     document.getElementById('next-page').disabled = !hasNextPage;
   };
 
-  loadCategories(); // Carga categorías al inicio
-  applyFilters(); // Ejecuta filtros iniciales
-
+  loadCategories();
+  applyFilters();
+  filterProducts();
+  fetchProducts();
 </script>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="/index.js"></script>
 
-<!-- Estilos básicos para el diseño -->
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -154,12 +159,13 @@
     cursor: pointer;
   }
 
-  .pokemon-image{
+  .pokemon-image {
     width: 100px;
     height: 100px;
     object-fit: contain;
     margin-bottom: 10px;
   }
+
   .product-card button:hover {
     background: #0056b3;
   }

@@ -4,12 +4,12 @@ import path from "path";
 import http from "http";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
-// import productRoutes from "./routes/productRoutes.js";
-import cartRoutes from "./routes/cartRoutes.js";
-import ProductManager from "./managers/ProductManager.js";
+import viewsRouter from "./routes/views.router.js";
 import productsRouter from "./routes/products.router.js";
+import cartRouter from "./routes/carts.router.js";
 import connectMongoDB from "./config/db.js";
 import dotenv from "dotenv";
+import Product from "./models/products.model.js";
 
 // Inicializo variables de entorno
 dotenv.config();
@@ -34,14 +34,9 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.use("/img", express.static(path.join(__dirname, "img")));
 
 // Rutas de API
-// app.use("/api/products", productRoutes);
-app.use("/api/carts", cartRoutes);
-
-// ProductManager instanciado
-const productManager = new ProductManager("./data/products.json");
-
-// Endpoints mongoose
 app.use("/api/products", productsRouter);
+app.use("/api/carts", cartRouter);
+app.use("/", viewsRouter);
 
 // Servidor HTTP + Websockets
 const PORT = process.env.PORT || 8080;
@@ -49,33 +44,36 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // Configuración Websockets
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   console.log("Cliente conectado");
 
-  socket.on("newProduct", async(productData) => {
+  // Emitir productos actuales al conectar
+  const products = await Product.find().lean();
+  socket.emit("updateProducts", products);
+
+  // Agregar nuevo producto
+  socket.on("newProduct", async (productData) => {
     try {
-      const newProduct = await productManager.addProduct(productData);
-      io.emit("productAdded", newProduct)
+      const newProduct = await Product.create(productData);
+      const updatedProducts = await Product.find().lean();
+      io.emit("updateProducts", updatedProducts);
     } catch (error) {
       console.error("Error al agregar el producto:", error);
     }
-  })
-
-
-  socket.emit("updateProducts", productManager.getProducts());
-
-  socket.on("newProduct", async (product) => {
-    await productManager.addProduct(product);
-    const products = await productManager.getProducts();
-    io.emit("updateProducts", products);
   });
 
+  // Eliminar producto
   socket.on("deleteProduct", async (productId) => {
-    await productManager.deleteProduct(productId);
-    const products = await productManager.getProducts();
-    io.emit("updateProducts", products);
+    try {
+      await Product.findByIdAndDelete(productId);
+      const updatedProducts = await Product.find().lean();
+      io.emit("updateProducts", updatedProducts);
+    } catch (error) {
+      console.error("Error al eliminar el producto:", error);
+    }
   });
 });
+
 
 // Rutas para vistas
 app.get("/", (req, res) => {
@@ -83,7 +81,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/products", async (req, res) => {
-  const products = await productManager.getProducts();
+  const products = await Product.find().lean();
   res.render("home", { products });
 });
 

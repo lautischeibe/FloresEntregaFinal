@@ -1,0 +1,48 @@
+{{!-- detailProducts.handlebars --}}
+
+<main class="product-detail">
+  <section class="product-card">
+    <h1>{{product.title}}</h1>
+    <img src="/img/{{product.thumbnails}}" alt="{{product.title}}" style="width: 300px; height: auto;" />
+    <p><strong>Descripción:</strong> {{product.description}}</p>
+    <p><strong>Precio:</strong> ${{product.price}}</p>
+    <p><strong>Categoría:</strong> {{product.category}}</p>
+    <p><strong>Stock disponible:</strong> {{product.stock}}</p>
+
+    <button onclick="addToCart(null, '{{product._id}}')">🛒 Agregar al carrito</button>
+  </section>
+</main>
+
+<script>
+  // 🔄 Variable global que se sincroniza con localStorage
+  let activeCartId = localStorage.getItem("activeCart") || null;
+
+  // 🛒 Función para agregar producto al carrito seleccionado
+  async function addToCart(cartId, productId) {
+    cartId = cartId || activeCartId;
+
+    if (!cartId || !productId) {
+      alert('Seleccioná un carrito válido antes de agregar productos.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: 1 })
+      });
+
+      if (response.ok) {
+        alert('Producto agregado correctamente al carrito.');
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Error al agregar producto:', error);
+      alert('Hubo un problema al agregar el producto.');
+    }
+  }
+</script>
+
