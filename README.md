@@ -1,0 +1,4 @@
+Hola profe! Para usar la web tenes que crear un nuevo carrito, luego de crearlo lo seleccionas con "Usar este carrito" y ahi podes empezar tus compras pokemon. En "Ver carrito", podes tener una vista de los Pokemons que elegiste y desde ahi seleccionar cuales queres eliminar del carrito, o si no tambien eliminar el carrito en su totalidad haciendo que los Pokemons vuelvan al stock original. Tenemos a /realTimeProducts, que es como un manager para crear tus pokemons, o eliminarlos directamente. 
+Te agradezco por la paciencia, hice lo que se pudo, tal vez me falte algo pero ya se me engancho esto con backend 2 asi que a full todavia jaja, gracias por las clases!
+Esto va en el .env: PORT=8080 
+URI_MONGODB=mongodb+srv://lautischeibe:a42331389@ecommerce-cluster.kczq7za.mongodb.net/myDatabase?retryWrites=true&w=majority&appName=ecommerce-cluster
