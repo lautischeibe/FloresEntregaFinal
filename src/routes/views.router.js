@@ -39,5 +39,35 @@ viewsRouter.get("/products/:pid", async (req, res) => {
   }
 });
 
+viewsRouter.get('/realtimeproducts', async (req, res) => {
+  const { page = 1, limit = 5 } = req.query;
+
+  const result = await Product.paginate({}, { page, limit, lean: true });
+  const categories = await Product.distinct('category');
+
+  res.render('realtimeproducts', {
+    products: result.docs,
+    page: result.page,
+    categories
+  });
+});
+
+viewsRouter.get("/realtimeproducts", async (req, res) => {
+  try {
+    const { page = 1, limit = 5 } = req.query;
+
+    const result = await Product.paginate({}, { page, limit, lean: true });
+    const categories = await Product.distinct("category");
+
+    res.render("realtimeproducts", {
+      products: result.docs,
+      page: result.page,
+      categories
+    });
+  } catch (error) {
+    res.status(500).render("error", { message: "Error al cargar productos en tiempo real" });
+  }
+});
+
 
 export default viewsRouter;

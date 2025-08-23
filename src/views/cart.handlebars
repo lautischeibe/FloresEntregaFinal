@@ -1,22 +1,37 @@
 <h1>Mi Carrito</h1>
-<button class="delete-cart-btn" data-id={{cart._id}}>🗑️ Eliminar carrito</button>
+
+<button
+  class="delete-cart-btn"
+  data-id="{{cart._id}}"
+>
+  Eliminar carrito
+</button>
+
 {{#if cart.products.length}}
-<ul>
-  {{#each cart.products}}
-  <li class="cart-item" style="margin-bottom: 20px;">
-    <img src="/img/{{product.thumbnails}}" alt="${{product.title}}" style="width: 300px; height: auto;" />
-    <div>
-      <strong>{{this.product.title}}</strong><br>
-      <em>{{this.product.description}}</em><br>
-      <strong>Precio:</strong> ${{this.product.price}}<br>
-      <strong>Cantidad:</strong> {{this.quantity}}<br>
-      <button onclick="removeFromCart('{{../cart._id}}', '{{this.product._id}}')">❌ Eliminar</button>
-    </div>
-  </li>
-  {{/each}}
-</ul>
+  <ul>
+    {{#each cart.products}}
+      <li class="cart-item" style="margin-bottom: 20px;">
+        <img
+          src="/img/{{this.product.thumbnails}}"
+          alt="{{this.product.title}}"
+          style="width: 300px; height: auto;"
+        />
+        <div>
+          <strong>{{this.product.title}}</strong><br>
+          <em>{{this.product.description}}</em><br>
+          <strong>Precio:</strong> ${{this.product.price}}<br>
+          <strong>Cantidad:</strong> {{this.quantity}}<br>
+          <button
+            onclick="removeFromCart('{{../cart._id}}','{{this.product._id}}')"
+          >
+            Eliminar producto
+          </button>
+        </div>
+      </li>
+    {{/each}}
+  </ul>
 {{else}}
-<p>El carrito está vacío. ¡Agregá productos desde la tienda!</p>
+  <p>El carrito está vacío. ¡Agregá productos desde la tienda!</p>
 {{/if}}
 
 <script>
@@ -25,50 +40,46 @@
       alert('Faltan datos para eliminar el producto.');
       return;
     }
-
     try {
-      const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
-        method: 'DELETE'
-      });
+      const res = await fetch(
+        `/api/carts/${cartId}/products/${productId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
 
-      if (response.ok) {
+      if (res.ok) {
         alert('Producto eliminado del carrito.');
-        location.reload();
+        window.location.reload();
       } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.message}`);
+        alert('Error: ' + data.message);
       }
-    } catch (error) {
-      console.error('Error al eliminar producto:', error);
+    } catch (err) {
+      console.error('Error al eliminar producto:', err);
       alert('Hubo un problema al eliminar el producto.');
     }
   }
 
-
-  document.addEventListener("click", async (e) => {
-    if (e.target.classList.contains("delete-cart-btn")) {
+  document.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('delete-cart-btn')) {
       const cartId = e.target.dataset.id;
-
-      if (!confirm("¿Estás seguro de que querés eliminar este carrito?")) return;
+      if (!confirm('¿Estás seguro de eliminar este carrito?')) return;
 
       try {
         const res = await fetch(`/api/carts/${cartId}`, {
-          method: "DELETE"
+          method: 'DELETE'
         });
-
-        const result = await res.json();
+        const data = await res.json();
 
         if (res.ok) {
-          alert("Carrito eliminado correctamente");
-          location.reload(); // o podés eliminar el elemento del DOM si querés evitar recargar
+          alert('Carrito eliminado correctamente');
+          window.location.reload();
         } else {
-          alert("Error: " + result.message);
+          alert('Error: ' + data.message);
         }
       } catch (err) {
-        console.error("Error al eliminar carrito:", err);
-        alert("Hubo un problema al eliminar el carrito");
+        console.error('Error al eliminar carrito:', err);
+        alert('Hubo un problema al eliminar el carrito');
       }
     }
   });
-
 </script>

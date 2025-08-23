@@ -1,121 +1,177 @@
 <div>
   <h1>Productos en Tiempo Real</h1>
 
-  <h2>Nuevo Producto</h2>
-  <form id="formNewProduct">
-    <input type="number" id="productId" placeholder="ID del producto" required />
-    <input type="text" id="title" placeholder="Título" required />
-    <input type="text" id="description" placeholder="Descripción" required />
-    <input type="text" id="code" placeholder="Code" required />
-    <input type="number" id="price" placeholder="Precio" required />
-    <input type="boolean" id="status" placeholder="Status" required />
-    <input type="number" id="stock" placeholder="Stock" required />
-    <input type="text" id="category" placeholder="Categoría" required />
-    <input type="text" id="thumbnail" placeholder="URL de la imagen" required />
+  <!-- 1. Agregar Producto -->
+  <h2>Agregar Producto</h2>
+  <form id="formNewProduct" style="margin-bottom:20px;">
+    <input name="title"       id="title"       type="text"   placeholder="Título: Pikachu"      required />
+    <input name="description" id="description" type="text"   placeholder="Descripción: Pokemon Electrico" required />
+    <input name="code"        id="code"        type="text"   placeholder="Código: PIK002"      required />
+    <input name="price"       id="price"       type="number" placeholder="Precio: 1000"      required />
+    <input name="stock"       id="stock"       type="number" placeholder="Stock: 10"       required />
+    <input name="category"    id="category"    type="text"   placeholder="Categoría: Electrico"   required />
     <button type="submit">Agregar Producto</button>
   </form>
 
-  <!-- Filtros -->
-  <form id="filters-form">
-    <label for="query">Buscar por categoría:</label>
+  <!-- 2. Filtros -->
+  <form id="filters-form" style="margin:20px 0;">
+    <label for="query">Categoría:</label>
     <select id="query">
-      <option value="">Categoría</option>
+      <option value="">Todas</option>
     </select>
 
-    <label for="sort">Ordenar por precio:</label>
+    <label for="minPrice">Precio mínimo:</label>
+    <input type="number" id="minPrice" placeholder="0" />
+
+    <label for="maxPrice">Precio máximo:</label>
+    <input type="number" id="maxPrice" placeholder="1000" />
+
+    <label for="sort">Ordenar precio:</label>
     <select id="sort">
-      <option value="">Sin ordenamiento</option>
+      <option value="">Sin orden</option>
       <option value="asc">Ascendente</option>
       <option value="desc">Descendente</option>
     </select>
 
-    <button type="button" onclick="applyFilters()">Aplicar Filtros</button>
+    <button type="button" onclick="currentPage = 1; applyFilters()">
+      Aplicar Filtros
+    </button>
   </form>
 
-  <!-- Lista de productos -->
+  <!-- 3. Lista de productos -->
   <div id="product-list" class="product-grid"></div>
 
-  <!-- Paginación -->
-  <nav id="pagination">
+  <!-- 4. Paginación -->
+  <nav id="pagination" style="margin-top:20px;">
     <button id="prev-page" onclick="changePage(-1)" disabled>Anterior</button>
     <span id="current-page"></span>
     <button id="next-page" onclick="changePage(1)" disabled>Siguiente</button>
   </nav>
-
-  <h2>Eliminar Producto</h2>
-  <form id="delete-form">
-    <input type="number" id="delete-id" placeholder="ID del producto" required />
-    <button type="submit">Eliminar Producto</button>
-  </form>
 </div>
 
 <script>
   let currentPage = 1;
-  let limit = 5;
+  const limit = 5;
 
-  const loadCategories = async () => {
-    const response = await fetch('/api/products/categories');
-    const categories = await response.json();
+  async function loadCategories() {
+    try {
+      const res = await fetch('/api/products/categories');
+      if (!res.ok) throw new Error('Error al cargar categorías');
+      const categories = await res.json();
+      const select = document.getElementById('query');
+      select.innerHTML = '<option value="">Todas</option>';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    } catch (error) {
+      console.error('Error en loadCategories:', error);
+    }
+  }
 
-    const querySelect = document.getElementById('query');
-    categories.forEach(category => {
-      const option = document.createElement('option');
-      option.value = category;
-      option.textContent = category;
-      querySelect.appendChild(option);
-    });
-  };
-
-  const applyFilters = async () => {
-    const query = document.getElementById('query').value;
-    const sort = document.getElementById('sort').value;
-
-    let url = `/api/products?page=${currentPage}&limit=${limit}`;
-    if (query) url += `&category=${encodeURIComponent(query)}`;
-    if (sort) url += `&sort=${sort}`;
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    updateProductList(data.payload);
-    updatePagination(data);
-  };
-
-  const changePage = async (direction) => {
-    currentPage += direction;
-    applyFilters();
-  };
-
-  const updateProductList = (products) => {
-    const productList = document.getElementById('product-list');
-    productList.innerHTML = '';
-    products.forEach(product => {
+  function updateProductList(products) {
+    const list = document.getElementById('product-list');
+    list.innerHTML = '';
+    products.forEach(p => {
       const card = document.createElement('div');
       card.className = 'product-card';
       card.innerHTML = `
-        <h3>${product.title}</h3>
-        <img src="/img/${product.thumbnails}" style="width: 300px; height: auto;" />
-        <p>${product.description}</p>
-        <p>${product.code}</p>
-        <p><strong>Precio:</strong> $${product.price}</p>
-        <p><strong>Categoría:</strong> ${product.category}</p>
-        <p>${product._id}</p>
+        <h3>${p.title}</h3>
+        <img src="/img/${p.thumbnails}" alt="${p.title}" style="width:300px;height:auto;" />
+        <p>${p.description}</p>
+        <p><strong>Precio:</strong> $${p.price}</p>
+        <p><strong>Categoría:</strong> ${p.category}</p>
+        <p>ID: ${p._id}</p>
+        <button onclick="deleteProduct('${p._id}')">Eliminar</button>
       `;
-      productList.appendChild(card);
+      list.appendChild(card);
     });
-  };
+  }
 
-  const updatePagination = ({ page, hasPrevPage, hasNextPage }) => {
+  function updatePagination({ page, hasPrevPage, hasNextPage }) {
+    currentPage = page;
     document.getElementById('current-page').textContent = `Página ${page}`;
     document.getElementById('prev-page').disabled = !hasPrevPage;
     document.getElementById('next-page').disabled = !hasNextPage;
-  };
+  }
 
-  loadCategories();
-  applyFilters();
-  filterProducts();
-  fetchProducts();
+  async function applyFilters() {
+    const query    = document.getElementById('query').value.trim();
+    const minPrice = document.getElementById('minPrice').value.trim();
+    const maxPrice = document.getElementById('maxPrice').value.trim();
+    const sort     = document.getElementById('sort').value.trim();
+    let url = `/api/products?limit=${limit}&page=${currentPage}`;
+    if (query)    url += `&query=${encodeURIComponent(query)}`;
+    if (minPrice) url += `&minPrice=${encodeURIComponent(minPrice)}`;
+    if (maxPrice) url += `&maxPrice=${encodeURIComponent(maxPrice)}`;
+    if (sort)     url += `&sort=${encodeURIComponent(sort)}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Error al filtrar productos');
+      const data = await res.json();
+      updateProductList(data.payload);
+      updatePagination(data);
+    } catch (error) {
+      console.error('Error en applyFilters:', error);
+    }
+  }
+
+  function changePage(direction) {
+    currentPage += direction;
+    applyFilters();
+  }
+
+  async function handleNewProductSubmit(event) {
+    event.preventDefault();
+    const title       = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const code        = document.getElementById('code').value.trim();
+    const price       = Number(document.getElementById('price').value.trim());
+    const stock       = Number(document.getElementById('stock').value.trim());
+    const category    = document.getElementById('category').value.trim();
+    const payload = { title, description, code, price, stock, category, status: true };
+
+    try {
+      const res = await fetch('/api/products', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error al crear producto');
+      alert('Producto agregado correctamente');
+      event.target.reset();
+      applyFilters();
+    } catch (error) {
+      console.error('Error en handleNewProductSubmit:', error);
+    }
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm('¿Deseas eliminar este producto?')) return;
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error al eliminar producto');
+      alert('Producto eliminado correctamente');
+      applyFilters();
+    } catch (error) {
+      console.error('Error en deleteProduct:', error);
+      alert(`No se pudo eliminar: ${error.message}`);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
+    applyFilters();
+    document
+      .getElementById('formNewProduct')
+      .addEventListener('submit', handleNewProductSubmit);
+  });
 </script>
+
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/index.js"></script>

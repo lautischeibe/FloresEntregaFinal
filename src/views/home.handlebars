@@ -1,13 +1,13 @@
 <div class="dashboard">
   <h1>Tienda Pokémon</h1>
 
-  <button onclick="createCart()">Crear nuevo carrito 🛒</button>
+  <button onclick="createCart()">Crear nuevo carrito</button>
 
   <div style="margin-top: 10px;">
-    <label for="cartSelect">Seleccionar carrito 🛒:</label>
+    <label for="cartSelect">Seleccionar carrito:</label>
     <select id="cartSelect"></select>
-    <button onclick="selectCart()">Usar este carrito ✅</button>
-    <button onclick="loadCart()">Ver carrito 🛒</button>
+    <button onclick="selectCart()">Usar este carrito</button>
+    <button onclick="loadCart()">Ver carrito</button>
     <p id="activeCartLabel">Carrito activo: ninguno</p>
   </div>
 
@@ -45,221 +45,210 @@
   </div>
 </div>
 
-<!-- Scripts -->
 <script>
   let activeCartId = null;
   let currentPage = 1;
   const limit = 5;
 
+  // 1. Crear un carrito y agregarlo al <select>
   async function createCart() {
     try {
-      const response = await fetch('/api/carts', { method: 'POST' });
-      if (!response.ok) throw new Error('Error al crear carrito');
+      const res = await fetch('/api/carts', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error al crear carrito');
 
-      const newCart = await response.json();
-      const cartId = newCart._id || newCart.id;
-
+      const cartId = data.payload._id;
       alert(`Carrito creado con ID: ${cartId}`);
 
-      const cartSelect = document.getElementById('cartSelect');
-      const option = document.createElement('option');
-      option.value = cartId;
-      option.textContent = `Carrito ${cartId}`;
-      cartSelect.appendChild(option);
-      cartSelect.value = cartId;
+      const select = document.getElementById('cartSelect');
+      const opt = document.createElement('option');
+      opt.value = cartId;
+      opt.textContent = `Carrito ${cartId}`;
+      select.appendChild(opt);
+      select.value = cartId;
 
-      document.getElementById('activeCartLabel').textContent = `Carrito activo: ${cartId}`;
-    } catch (error) {
-      console.error('Error al crear el carrito:', error);
-      alert('Hubo un problema al crear el carrito.');
+      activeCartId = cartId;
+      document.getElementById('activeCartLabel').textContent =
+        `Carrito activo: ${cartId}`;
+    } catch (err) {
+      console.error('Error al crear carrito:', err);
+      alert(`Error: ${err.message}`);
     }
   }
 
+  // 2. Seleccionar carrito desde el <select>
   function selectCart() {
     const selected = document.getElementById('cartSelect').value;
-
     if (!selected) {
-      alert('Seleccioná un carrito válido.');
+      alert('Selecciona un carrito válido.');
       return;
     }
-
     activeCartId = selected;
-    localStorage.setItem("activeCart", activeCartId);
-    document.getElementById('activeCartLabel').textContent = `Carrito activo: ${activeCartId}`;
+    localStorage.setItem('activeCart', activeCartId);
+    document.getElementById('activeCartLabel').textContent =
+      `Carrito activo: ${activeCartId}`;
   }
 
-
+  // 3. Cargar todos los carritos para el <select>
   async function loadCarts() {
     try {
-      const response = await fetch('/api/carts');
-      if (!response.ok) throw new Error('Error al cargar carritos');
+      const res = await fetch('/api/carts');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error al cargar carritos');
 
-      const carts = await response.json();
-      const cartSelect = document.getElementById('cartSelect');
-      cartSelect.innerHTML = '';
-
-      carts.forEach(cart => {
-        const cartId = cart._id || cart.id;
-        const option = document.createElement('option');
-        option.value = cartId;
-        option.textContent = `Carrito ${cartId}`;
-        cartSelect.appendChild(option);
+      const select = document.getElementById('cartSelect');
+      select.innerHTML = '';
+      data.payload.forEach(cart => {
+        const id = cart._id;
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `Carrito ${id}`;
+        select.appendChild(opt);
       });
 
-      cartSelect.addEventListener('change', () => {
-        const selected = cartSelect.value;
-        document.getElementById('activeCartLabel').textContent = `Carrito activo: ${selected}`;
+      select.addEventListener('change', () => {
+        activeCartId = select.value;
+        document.getElementById('activeCartLabel').textContent =
+          `Carrito activo: ${activeCartId}`;
       });
-    } catch (error) {
-      console.error('Error al cargar carritos:', error);
+    } catch (err) {
+      console.error('Error al cargar carritos:', err);
     }
   }
 
-  async function loadCart() {
+  // 4. Ver carrito en vista Handlebars
+  function loadCart() {
     const cartId = document.getElementById('cartSelect').value;
     if (!cartId) {
-      alert('Seleccioná un carrito válido.');
+      alert('Selecciona un carrito válido.');
       return;
     }
     window.location.href = `/api/carts/${cartId}/view`;
   }
 
-  async function addToCart(cartId, productId) {
-    cartId = cartId || activeCartId;
-    if (!cartId || !productId) {
-      alert('Seleccioná un carrito antes de agregar productos.');
+  // 5. Agregar producto al carrito activo
+  async function addToCart(_, productId) {
+    const cartId = activeCartId;
+    if (!cartId) {
+      alert('Selecciona un carrito antes de agregar productos.');
       return;
     }
-
     try {
-      const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: 1 })
-      });
-
-      if (response.ok) {
-        alert('Producto agregado correctamente al carrito.');
-      } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.message}`);
-      }
-    } catch (error) {
-      console.error('Error al agregar producto:', error);
-      alert('Hubo un problema al agregar el producto.');
+      const res = await fetch(
+        `/api/carts/${cartId}/products/${productId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity: 1 })
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error al agregar al carrito');
+      alert('Producto agregado correctamente.');
+    } catch (err) {
+      console.error('Error al agregar producto:', err);
+      alert(`Error: ${err.message}`);
     }
   }
 
-async function loadCategories() {
-  try {
-    const response = await fetch('/api/products/categories');
-    if (!response.ok) throw new Error('Error al cargar categorías');
+  // 6. Cargar categorías
+  async function loadCategories() {
+    try {
+      const res = await fetch('/api/products/categories');
+      const cats = await res.json();
+      if (!res.ok) throw new Error('Error al cargar categorías');
 
-    const categories = await response.json();
-    const querySelect = document.getElementById('query');
-    querySelect.innerHTML = '<option value="">Todas</option>';
-
-    categories.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat;
-      option.textContent = cat;
-      querySelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error al cargar categorías:', error);
+      const select = document.getElementById('query');
+      select.innerHTML = '<option value="">Todas</option>';
+      cats.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('Error al cargar categorías:', err);
+    }
   }
-}
 
-async function filterProducts() {
-  currentPage = 1; // Reiniciar paginación al aplicar filtros
+  // 7. Filtrar y paginar productos
+  async function filterProducts() {
+    currentPage = 1;
+    await fetchProducts();
+  }
 
-  const query = document.getElementById('query').value;
-  const minPrice = document.getElementById('minPrice').value;
-  const maxPrice = document.getElementById('maxPrice').value;
-  const sort = document.getElementById('sort').value;
+  async function fetchProducts() {
+    const query = document.getElementById('query').value.trim();
+    const minPrice = document.getElementById('minPrice').value;
+    const maxPrice = document.getElementById('maxPrice').value;
+    const sort = document.getElementById('sort').value;
 
-  let url = `/api/products/filter?limit=${limit}&page=${currentPage}&`;
-  if (query) url += `query=${query}&`;
-  if (minPrice) url += `minPrice=${minPrice}&`;
-  if (maxPrice) url += `maxPrice=${maxPrice}&`;
-  if (sort) url += `sort=${sort}`;
+    let url = `/api/products?limit=${limit}&page=${currentPage}`;
+    if (query)    url += `&query=${encodeURIComponent(query)}`;
+    if (minPrice) url += `&minPrice=${minPrice}`;
+    if (maxPrice) url += `&maxPrice=${maxPrice}`;
+    if (sort)     url += `&sort=${sort}`;
 
-  try {
-    const response = await fetch(url);
-    if (response.ok) {
-      const data = await response.json();
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
       renderProducts(data.payload);
       updatePagination(data);
-    } else {
-      console.error('Error al filtrar productos:', await response.json());
+    } catch (err) {
+      console.error('Error al obtener productos:', err);
     }
-  } catch (error) {
-    console.error('Error al filtrar productos:', error);
   }
+
+function renderProducts(products) {
+  const list = document.getElementById('product-list');
+  list.innerHTML = '';
+  products.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.innerHTML = `
+      <img
+        src="/img/${p.thumbnails}"
+        alt="${p.title}"
+        style="width:300px;height:auto;"
+      />
+      <h3>${p.title}</h3>
+      <p><strong>Categoría:</strong> ${p.category}</p>
+      <p>${p.description}</p>
+      <p><strong>Precio:</strong> $${p.price}</p>
+      <p><strong>Stock:</strong> ${p.stock}</p>
+      <a href="/products/${p._id}">Ver detalles</a>
+      <button onclick="addToCart(activeCartId,'${p._id}')">
+        Agregar al carrito
+      </button>
+    `;
+    list.appendChild(card);
+  });
 }
 
 
-
-  async function fetchProducts(page = 1) {
-    try {
-      const response = await fetch(`/api/products?limit=${limit}&page=${page}`);
-      if (response.ok) {
-        const data = await response.json();
-        renderProducts(data.payload);
-        updatePagination(data);
-      } else {
-        console.error('Error al obtener productos:', await response.json());
-      }
-    } catch (error) {
-      console.error('Error al obtener productos:', error);
-    }
-  }
-
-  function renderProducts(products) {
-    const productList = document.getElementById('product-list');
-    productList.innerHTML = '';
-    products.forEach(product => {
-      const productCard = document.createElement('div');
-      productCard.className = 'product-card';
-      productCard.innerHTML = `
-        <img src="/img/${product.thumbnails}" alt="${product.title}" style="width: 300px; height: auto;" />
-        <h3>${product.title}</h3>
-        <p><strong>Categoría:</strong> ${product.category}</p>
-        <p>${product.description}</p>
-        <p><strong>Precio:</strong> $${product.price}</p>
-        <a href="/products/${product._id}">🔍 Ver detalles</a>
-        <button onclick="addToCart(activeCartId, '${product._id}')">Agregar al carrito</button>
-      `;
-      productList.appendChild(productCard);
-    });
-  }
 
   function updatePagination({ page, hasPrevPage, hasNextPage }) {
     currentPage = page;
-    document.getElementById('currentPage').textContent = `Página ${currentPage}`;
+    document.getElementById('currentPage').textContent = `Página ${page}`;
     document.getElementById('prevPageBtn').disabled = !hasPrevPage;
     document.getElementById('nextPageBtn').disabled = !hasNextPage;
   }
 
-  function changePage(direction) {
-    if (direction === 'prev' && currentPage > 1) {
-      fetchProducts(currentPage - 1);
-    } else if (direction === 'next') {
-      fetchProducts(currentPage + 1);
-    }
+  function changePage(dir) {
+    if (dir === 'prev' && currentPage > 1) currentPage--;
+    else if (dir === 'next') currentPage++;
+    fetchProducts();
   }
 
+  // Inicialización
   document.addEventListener('DOMContentLoaded', () => {
     loadCarts();
     fetchProducts();
-    filterProducts();
     loadCategories();
   });
 </script>
 
-
-
-<!-- Estilo básico -->
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -284,29 +273,14 @@ async function filterProducts() {
     text-align: center;
   }
 
-  .pokemon-icon {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    margin-bottom: 10px;
-  }
-
   .product-card button {
     margin-top: 10px;
     padding: 8px 12px;
-    background: #007BFF;
+    background: #007bff;
     color: #fff;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-  }
-
-
-  .pokemon-image {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    margin-bottom: 10px;
   }
 
   .product-card button:hover {
